@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil - Bráulio Franco</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;">
+        <img src="public/images/logo-escola (1).jpg" alt="Logo Bráulio Franco" style="height: 40px; width: auto; object-fit: contain;">
+        <span>Bráulio Franco</span>
+      </a>
+      <div class="navbar-menu"></div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div style="margin-bottom: 1.5rem;">
+      <a href="dashboard_aluno.html" class="btn btn-secondary">← Voltar ao Dashboard</a>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <!-- Profile Card -->
+    <div class="profile-card">
+      <img id="profileAvatar" src="" alt="Avatar" class="profile-avatar">
+      <div class="profile-info">
+        <h2 id="profileName"></h2>
+        <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+        <p><strong>Série/Turma:</strong> <span id="profileGrade"></span></p>
+        <button onclick="openEditModal()" class="edit-profile-btn">✏️ Editar Perfil</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">📚 Livros Lidos</p>
+        <p class="stat-value" id="booksReadCount">0</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--primary-blue);">
+        <p class="stat-label">📖 Lendo Agora</p>
+        <p class="stat-value" id="currentlyReadingCount">0</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--success-green);">
+        <p class="stat-label">🎯 Taxa de Pontualidade</p>
+        <p class="stat-value" id="onTimePercentage">100%</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--warning-yellow);">
+        <p class="stat-label">🏆 Ranking</p>
+        <p class="stat-value" id="userRanking">#-</p>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations-section">
+      <h3 class="recommendations-title">
+        🎯 Recomendações Personalizadas
+      </h3>
+      <p style="opacity: 0.9; margin-bottom: 1rem;">Baseado nos seus hábitos de leitura</p>
+      <div id="recommendationsGrid" class="recommendations-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="editModal" class="modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: white; border-radius: 0.75rem; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>Editar Perfil</h2>
+        <button onclick="closeEditModal()" style="background: none; border: none; font-size: 2rem; cursor: pointer;">&times;</button>
+      </div>
+      
+      <form id="editProfileForm">
+        <div class="avatar-upload-container" style="margin-bottom: 1.5rem;">
+          <img id="avatarPreview" src="" alt="Avatar" class="avatar-preview">
+          <div class="avatar-upload-btn">
+            <input type="file" id="avatarInput" accept="image/*" onchange="previewAvatar(event)">
+            <label for="avatarInput">📷 Escolher Foto</label>
+          </div>
+          <small style="color: var(--text-gray);">Ou cole uma URL de imagem abaixo</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">URL da Foto (opcional)</label>
+          <input type="text" id="avatarUrl" class="form-input" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome Completo *</label>
+          <input type="text" id="editName" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Série/Turma *</label>
+          <select id="editGrade" class="form-input" required>
+            <option value="">Selecione sua série</option>
+            <option value="6º Ano">6º Ano</option>
+            <option value="7º Ano">7º Ano</option>
+            <option value="9º Ano">9º Ano</option>
+            <option value="1º Ano TVC 01">1º Ano TVC 01</option>
+            <option value="1º Ano TVC 02">1º Ano TVC 02</option>
+            <option value="2º Ano TVC">2º Ano TVC</option>
+            <option value="2º Ano CPG">2º Ano CPG</option>
+            <option value="3º Ano TVC">3º Ano TVC</option>
+            <option value="3º Ano CPG">3º Ano CPG</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'student') {
+      window.location.href = 'login.html';
+    }
+
+    function showAlert(message, type = 'info') {
+      const container = document.getElementById('alertContainer');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      container.appendChild(alert);
+      setTimeout(() => alert.remove(), 5000);
+    }
+
+    function loadProfile() {
+      const user = getCurrentUser();
+      document.getElementById('profileAvatar').src = user.avatar || DEFAULT_AVATAR + encodeURIComponent(user.name);
+      document.getElementById('profileName').textContent = user.name;
+      document.getElementById('profileEmail').textContent = user.email;
+      document.getElementById('profileGrade').textContent = user.grade || 'Não informado';
+
+      // Stats
+      const loans = getLoans();
+      const returnedLoans = loans.filter(l => l.userId === user.id && l.status === 'returned');
+      const activeLoans = loans.filter(l => l.userId === user.id && l.status === 'active');
+      
+      const onTimeReturns = returnedLoans.filter(l => {
+        const returnDate = new Date(l.returnDate);
+        const dueDate = new Date(l.dueDate);
+        return returnDate <= dueDate;
+      }).length;
+      
+      const onTimePercentage = returnedLoans.length > 0 
+        ? Math.round((onTimeReturns / returnedLoans.length) * 100) 
+        : 100;
+
+      document.getElementById('booksReadCount').textContent = returnedLoans.length;
+      document.getElementById('currentlyReadingCount').textContent = activeLoans.length;
+      document.getElementById('onTimePercentage').textContent = onTimePercentage + '%';
+
+      // Ranking
+      const allStudents = getUsers().filter(u => u.role === 'student');
+      const studentStats = allStudents.map(student => {
+        const studentLoans = loans.filter(l => l.userId === student.id);
+        return { id: student.id, name: student.name, count: studentLoans.length };
+      }).sort((a, b) => b.count - a.count);
+
+      const userRank = studentStats.findIndex(s => s.id === user.id) + 1;
+      document.getElementById('userRanking').textContent = '#' + userRank;
+    }
+
+    function loadRecommendations() {
+      const recommendations = getRecommendations(currentUser.id, 6);
+      const container = document.getElementById('recommendationsGrid');
+      
+      if (recommendations.length === 0) {
+        container.innerHTML = '<p style="color: white; text-align: center; width: 100%;">Comece a ler para receber recomendações personalizadas!</p>';
+        return;
+      }
+
+      container.innerHTML = recommendations.map(book => `
+        <div class="recommendation-card" onclick="window.location.href='book.html?id=${book.id}'">
+          <img src="${book.coverUrl}" alt="${book.title}" onerror="this.src='public/capadelivro/placeholder.svg'">
+          <h4>${book.title}</h4>
+          <p>${book.author}</p>
+        </div>
+      `).join('');
+    }
+
+    function openEditModal() {
+      const user = getCurrentUser();
+      document.getElementById('avatarPreview').src = user.avatar || DEFAULT_AVATAR + encodeURIComponent(user.name);
+      document.getElementById('avatarUrl').value = user.avatar && !user.avatar.includes('ui-avatars.com') ? user.avatar : '';
+      document.getElementById('editName').value = user.name;
+      document.getElementById('editGrade').value = user.grade || '';
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function previewAvatar(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('avatarPreview').src = e.target.result;
+          document.getElementById('avatarUrl').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    document.getElementById('avatarUrl').addEventListener('input', function(e) {
+      const url = e.target.value;
+      if (url) {
+        document.getElementById('avatarPreview').src = url;
+      }
+    });
+
+    document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('editName').value.trim();
+      const grade = document.getElementById('editGrade').value;
+      let avatar = document.getElementById('avatarUrl').value.trim();
+      
+      if (!name || !grade) {
+        showAlert('Preencha todos os campos obrigatórios!', 'danger');
+        return;
+      }
+
+      // Se não tiver avatar personalizado, usar o padrão
+      if (!avatar || avatar.includes('ui-avatars.com')) {
+        avatar = DEFAULT_AVATAR + encodeURIComponent(name);
+      }
+
+      const result = updateUserProfile(currentUser.id, { name, grade, avatar });
+      
+      if (result.success) {
+        showAlert('✅ Perfil atualizado com sucesso!', 'success');
+        closeEditModal();
+        setTimeout(() => {
+          loadProfile();
+          loadRecommendations();
+          // Atualizar navbar
+          initApp();
+        }, 500);
+      } else {
+        showAlert('❌ Erro ao atualizar perfil.', 'danger');
+      }
+    });
+
+    // Initialize
+    loadProfile();
+    loadRecommendations();
+    initApp();
+  </script>
+</body>
+</html>

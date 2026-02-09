@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalhes do Livro - Bráulio Franco</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;">
+        <img src="public/images/logo-escola (1).jpg" alt="Logo Bráulio Franco" style="height: 40px; width: auto; object-fit: contain;">
+        <span>Bráulio Franco</span>
+      </a>
+      <div class="navbar-menu">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div style="margin-bottom: 1.5rem;">
+      <a href="books.html" class="btn btn-secondary">← Voltar para Livros</a>
+    </div>
+
+    <div id="alertsContainer"></div>
+
+    <div id="bookDetail">
+      <!-- Populated by JS -->
+    </div>
+
+    <div id="copiesSection" class="mt-4">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('id');
+
+    if (!bookId) {
+      window.location.href = 'books.html';
+    }
+
+    const book = getBookById(bookId);
+    if (!book) {
+      window.location.href = '404.html';
+    }
+
+    const currentUser = getCurrentUser();
+
+    function showAlert(message, type = 'info') {
+      const alertsContainer = document.getElementById('alertsContainer');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      alertsContainer.appendChild(alert);
+
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
+
+    function handleBorrow() {
+      if (!currentUser) {
+        showAlert('Você precisa fazer login para emprestar livros.', 'warning');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+        return;
+      }
+
+      if (currentUser.role === 'librarian') {
+        showAlert('Bibliotecários não podem emprestar livros. Use o painel de bibliotecário para registrar empréstimos.', 'warning');
+        return;
+      }
+
+      const result = borrowBook(bookId);
+      
+      if (result.success) {
+        showAlert('Livro emprestado com sucesso!', 'success');
+        setTimeout(() => {
+          renderBookDetail();
+          renderCopiesSection();
+        }, 1000);
+      } else {
+        showAlert(result.message, 'danger');
+      }
+    }
+
+    function handleReturn() {
+      if (!currentUser) {
+        showAlert('Você precisa fazer login.', 'warning');
+        return;
+      }
+
+      const loans = getLoans();
+      const userLoan = loans.find(l => l.bookId === bookId && l.userId === currentUser.id && l.status === 'active');
+      
+      if (!userLoan) {
+        showAlert('Você não tem empréstimo ativo deste livro.', 'warning');
+        return;
+      }
+
+      const result = returnBook(userLoan.id);
+      
+      if (result.success) {
+        showAlert(result.message, 'success');
+        setTimeout(() => {
+          renderBookDetail();
+          renderCopiesSection();
+        }, 1000);
+      } else {
+        showAlert(result.message, 'danger');
+      }
+    }
+
+    function handleReserve() {
+      if (!currentUser) {
+        showAlert('Você precisa fazer login para reservar livros.', 'warning');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+        return;
+      }
+
+      if (currentUser.role === 'librarian') {
+        showAlert('Bibliotecários não podem reservar livros.', 'warning');
+        return;
+      }
+
+      const result = reserveBook(currentUser.id, bookId);
+      
+      if (result.success) {
+        showAlert('Reserva realizada com sucesso! Você será notificado quando o livro estiver disponível.', 'success');
+        setTimeout(() => {
+          renderBookDetail();
+          renderCopiesSection();
+        }, 1000);
+      } else {
+        showAlert(result.message, 'danger');
+      }
+    }
+
+    function renderBookDetail() {
+      const available = getAvailableCopiesCount(bookId);
+      const total = getTotalCopiesCount(bookId);
+      const loanPeriod = getLoanPeriodDays(book.type);
+
+      let userHasLoan = false;
+      if (currentUser) {
+        const loans = getLoans();
+        userHasLoan = loans.some(l => l.bookId === bookId && l.userId === currentUser.id && l.status === 'active');
+      }
+
+      document.getElementById('bookDetail').innerHTML = `
+        <div class="book-detail">
+          <div>
+            <img src="${book.coverUrl}" alt="${book.title}" class="book-detail-img">
+          </div>
+          <div class="book-detail-info">
+            <h1>${book.title}</h1>
+            <div class="book-detail-meta">
+              <p><strong>Autor:</strong> ${book.author}</p>
+              <p><strong>Editora:</strong> ${book.publisher}</p>
+              <p><strong>Ano:</strong> ${book.year}</p>
+              <p><strong>Gênero:</strong> ${book.genre}</p>
+              <p><strong>Tipo:</strong> ${book.type === 'consulta' ? 'Consulta' : 'Normal'}</p>
+              <p><strong>ID:</strong> <code style="background: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600;">${book.id}</code></p>
+              <p><strong>Prazo de empréstimo:</strong> ${loanPeriod} dias</p>
+            </div>
+
+            <div class="book-detail-availability">
+              <div>
+                <p style="font-weight: 600; margin-bottom: 0.25rem;">Disponibilidade</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: ${available > 0 ? 'var(--success-green)' : 'var(--danger-red)'};">
+                  ${available} de ${total} disponível
+                </p>
+              </div>
+              ${!currentUser ? `
+                <a href="login.html" class="btn btn-primary">Fazer Login para Emprestar</a>
+              ` : currentUser.role === 'librarian' ? '' : userHasLoan ? `
+                <button onclick="handleReturn()" class="btn btn-warning">
+                  Devolver
+                </button>
+              ` : available > 0 ? `
+                <button onclick="handleBorrow()" class="btn btn-primary">
+                  Emprestar
+                </button>
+              ` : `
+                <button onclick="handleReserve()" class="btn btn-warning">
+                  Fazer Reserva
+                </button>
+              `}
+            </div>
+
+            <div class="book-detail-synopsis">
+              <h3 style="margin-bottom: 0.75rem;">Sinopse</h3>
+              <p style="line-height: 1.8; color: var(--text-gray);">${book.synopsis}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCopiesSection() {
+      const copies = getCopies().filter(c => c.bookId === bookId);
+      
+      if (currentUser && currentUser.role === 'librarian') {
+        document.getElementById('copiesSection').innerHTML = `
+          <div class="card" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Exemplares</h3>
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Número do Exemplar</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${copies.map(copy => `
+                    <tr>
+                      <td>Exemplar #${copy.copyNumber}</td>
+                      <td>
+                        <span class="badge ${
+                          copy.status === 'available' ? 'badge-success' : 
+                          copy.status === 'borrowed' ? 'badge-warning' : 
+                          'badge-info'
+                        }">
+                          ${
+                            copy.status === 'available' ? 'Disponível' : 
+                            copy.status === 'borrowed' ? 'Emprestado' : 
+                            'Reservado'
+                          }
+                        </span>
+                      </td>
+                      <td>
+                        ${copy.status === 'borrowed' ? `
+                          <a href="dashboard_bibliotecario.html" class="btn btn-primary btn-small">Gerenciar</a>
+                        ` : '-'}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize
+    renderBookDetail();
+    renderCopiesSection();
+
+    // Make functions global for onclick handlers
+    window.handleBorrow = handleBorrow;
+    window.handleReturn = handleReturn;
+    window.handleReserve = handleReserve;
+
+    initApp();
+  </script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Bibliotecário - Bráulio Franco</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/app.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;">
+        <img src="public/images/logo-escola (1).jpg" alt="Logo Bráulio Franco" style="height: 40px; width: auto; object-fit: contain;">
+        <span>Bráulio Franco</span>
+      </a>
+      <div class="navbar-menu"></div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Painel do Bibliotecário</h1>
+      <p style="color: var(--text-gray);">Gerencie livros, empréstimos e devoluções</p>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">Total de Livros</p>
+        <p class="stat-value" id="totalBooksCount">0</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--warning-yellow);">
+        <p class="stat-label">Empréstimos Ativos</p>
+        <p class="stat-value" id="activeLoansCount">0</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--danger-red);">
+        <p class="stat-label">Empréstimos Atrasados</p>
+        <p class="stat-value" id="overdueLoansCount">0</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--success-green);">
+        <p class="stat-label">Exemplares Disponíveis</p>
+        <p class="stat-value" id="availableCopiesCount">0</p>
+      </div>
+    </div>
+
+    <div style="border-bottom: 2px solid var(--border-gray); margin-bottom: 2rem;">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <button onclick="mudarAba('active')" id="activeTab" class="tab-button active">Empréstimos Ativos</button>
+        <button onclick="mudarAba('overdue')" id="overdueTab" class="tab-button">Atrasados</button>
+        <button onclick="mudarAba('returns')" id="returnsTab" class="tab-button">Histórico de Devoluções</button>
+        <button onclick="mudarAba('books')" id="booksTab" class="tab-button">Gerenciar Livros</button>
+        <button onclick="mudarAba('students')" id="studentsTab" class="tab-button">Gerenciar Alunos</button>
+        <button onclick="mudarAba('reports')" id="reportsTab" class="tab-button">Relatórios</button>
+      </div>
+    </div>
+
+    <div id="activeContent" class="tab-content"></div>
+    <div id="overdueContent" class="tab-content hidden"></div>
+    <div id="returnsContent" class="tab-content hidden"></div>
+    <div id="booksContent" class="tab-content hidden"></div>
+    <div id="studentsContent" class="tab-content hidden"></div>
+    <div id="reportsContent" class="tab-content hidden"></div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="bookModal" class="modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: white; border-radius: 0.75rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 id="modalTitle">Adicionar Livro</h2>
+        <button onclick="fecharModal()" style="background: none; border: none; font-size: 2rem; cursor: pointer;">&times;</button>
+      </div>
+      
+      <form id="bookForm">
+        <input type="hidden" id="modoEdicao" value="">
+        
+        <div class="form-group">
+          <label class="form-label">🆔 ID do Livro *</label>
+          <input type="text" id="livroId" class="form-input" required placeholder="Ex: livro001">
+          <small style="color: #666; font-size: 0.875rem;">Escolha um ID único</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">📚 Título *</label>
+          <input type="text" id="livroTitulo" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">✍️ Autor *</label>
+          <input type="text" id="livroAutor" class="form-input" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">🏢 Editora *</label>
+            <input type="text" id="livroEditora" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">📅 Ano *</label>
+            <input type="number" id="livroAno" class="form-input" required min="1000" max="2100">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">🎭 Gênero *</label>
+            <input type="text" id="livroGenero" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">📖 Tipo *</label>
+            <select id="livroTipo" class="form-input" required>
+              <option value="normal">Normal (14 dias)</option>
+              <option value="consulta">Consulta (7 dias)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">📝 Sinopse *</label>
+          <textarea id="livroSinopse" class="form-input" rows="4" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">🖼️ URL da Capa</label>
+          <input type="text" id="livroCapa" class="form-input" placeholder="https://... (opcional)">
+        </div>
+
+        <div class="form-group" id="exemplares-div">
+          <label class="form-label">📦 Número de Exemplares *</label>
+          <input type="number" id="livroExemplares" class="form-input" min="1" max="50" value="2">
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" onclick="fecharModal()" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 SALVAR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .tab-button { padding: 0.75rem 1.5rem; border: none; background: none; color: var(--text-gray); font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab-button:hover { color: var(--primary-blue); }
+    .tab-button.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
+    .tab-content { animation: fadeIn 0.3s; }
+    .tab-content.hidden { display: none !important; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .loan-card { display: flex; gap: 1.5rem; padding: 1.5rem; background: white; border: 1px solid var(--border-gray); border-radius: 0.75rem; margin-bottom: 1rem; }
+    .loan-card:hover { box-shadow: var(--shadow-md); }
+    .loan-card-cover { width: 80px; height: 120px; object-fit: cover; border-radius: 0.5rem; }
+  </style>
+
+  <script>
+    // AUTH
+    const user = getCurrentUser();
+    if (!user || user.role !== 'librarian') {
+      alert('Acesso restrito!');
+      window.location.href = 'login.html';
+    }
+
+    let abaAtual = 'active';
+
+    function mostrarAlerta(msg, tipo) {
+      const div = document.createElement('div');
+      div.className = `alert alert-${tipo}`;
+      div.textContent = msg;
+      document.getElementById('alertContainer').appendChild(div);
+      setTimeout(() => div.remove(), 5000);
+    }
+
+    function mudarAba(aba) {
+      abaAtual = aba;
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      document.getElementById(aba + 'Tab').classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      document.getElementById(aba + 'Content').classList.remove('hidden');
+      
+      if (aba === 'books') mostrarLivros();
+      else if (aba === 'active') mostrarAtivos();
+      else if (aba === 'overdue') mostrarAtrasados();
+      else if (aba === 'returns') mostrarDevolucoes();
+      else if (aba === 'students') mostrarAlunos();
+      else if (aba === 'reports') mostrarRelatorios();
+    }
+
+    function atualizarStats() {
+      const livros = getBooks();
+      const emprestimos = getLoans();
+      const copias = getCopies();
+      document.getElementById('totalBooksCount').textContent = livros.length;
+      document.getElementById('activeLoansCount').textContent = emprestimos.filter(e => e.status === 'active').length;
+      document.getElementById('overdueLoansCount').textContent = getOverdueLoans().length;
+      document.getElementById('availableCopiesCount').textContent = copias.filter(c => c.status === 'available').length;
+    }
+
+    function abrirModal(idLivro) {
+      const modal = document.getElementById('bookModal');
+      const form = document.getElementById('bookForm');
+      form.reset();
+      
+      if (idLivro) {
+        const livro = getBookById(idLivro);
+        const copiasAtuais = getCopies().filter(c => c.bookId === idLivro);
+        
+        document.getElementById('modalTitle').textContent = 'Editar Livro';
+        document.getElementById('modoEdicao').value = idLivro;
+        document.getElementById('livroId').value = livro.id;
+        document.getElementById('livroId').readOnly = true;
+        document.getElementById('livroTitulo').value = livro.title;
+        document.getElementById('livroAutor').value = livro.author;
+        document.getElementById('livroEditora').value = livro.publisher;
+        document.getElementById('livroAno').value = livro.year;
+        document.getElementById('livroGenero').value = livro.genre;
+        document.getElementById('livroTipo').value = livro.type;
+        document.getElementById('livroSinopse').value = livro.synopsis;
+        document.getElementById('livroCapa').value = livro.coverUrl;
+        
+        // Mostrar seção de exemplares na edição
+        document.getElementById('exemplares-div').style.display = 'block';
+        document.getElementById('livroExemplares').value = 0;
+        document.getElementById('livroExemplares').min = 0;
+        
+        // Mudar label para indicar NOVOS exemplares
+        const label = document.querySelector('#exemplares-div .form-label');
+        label.innerHTML = '📦 Adicionar Novos Exemplares <span style="color: var(--success-green); font-weight: 700;">(Atual: ' + copiasAtuais.length + ')</span>';
+        document.getElementById('livroExemplares').placeholder = 'Quantos novos exemplares adicionar?';
+        
+      } else {
+        document.getElementById('modalTitle').textContent = 'Adicionar Livro';
+        document.getElementById('modoEdicao').value = '';
+        document.getElementById('livroId').readOnly = false;
+        document.getElementById('exemplares-div').style.display = 'block';
+        document.getElementById('livroExemplares').min = 1;
+        document.getElementById('livroExemplares').value = 2;
+        
+        // Restaurar label original
+        const label = document.querySelector('#exemplares-div .form-label');
+        label.innerHTML = '📦 Número de Exemplares *';
+        document.getElementById('livroExemplares').placeholder = '';
+      }
+      
+      modal.classList.remove('hidden');
+    }
+
+    function fecharModal() {
+      document.getElementById('bookModal').classList.add('hidden');
+    }
+
+    // SALVAR LIVRO
+    document.getElementById('bookForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const modoEdicao = document.getElementById('modoEdicao').value;
+      const id = document.getElementById('livroId').value.trim();
+      const dados = {
+        title: document.getElementById('livroTitulo').value.trim(),
+        author: document.getElementById('livroAutor').value.trim(),
+        publisher: document.getElementById('livroEditora').value.trim(),
+        year: parseInt(document.getElementById('livroAno').value),
+        genre: document.getElementById('livroGenero').value.trim(),
+        type: document.getElementById('livroTipo').value,
+        synopsis: document.getElementById('livroSinopse').value.trim(),
+        coverUrl: document.getElementById('livroCapa').value.trim() || 'public/capadelivro/placeholder.svg'
+      };
+
+      const livros = getBooks();
+      
+      if (modoEdicao) {
+        // EDITAR
+        const idx = livros.findIndex(l => l.id === modoEdicao);
+        if (idx >= 0) {
+          livros[idx] = { ...livros[idx], ...dados };
+          saveBooks(livros);
+          
+          // Adicionar novos exemplares se solicitado
+          const novosExemplares = parseInt(document.getElementById('livroExemplares').value) || 0;
+          if (novosExemplares > 0) {
+            const copias = getCopies();
+            const copiasExistentes = copias.filter(c => c.bookId === modoEdicao);
+            const proximoNumero = copiasExistentes.length + 1;
+            
+            for (let i = 0; i < novosExemplares; i++) {
+              const novaCopia = new Copy(
+                'copy_' + modoEdicao + '_' + (proximoNumero + i),
+                modoEdicao,
+                proximoNumero + i,
+                'available'
+              );
+              copias.push(novaCopia);
+            }
+            saveCopies(copias);
+            
+            mostrarAlerta(`✅ Livro editado e ${novosExemplares} exemplar(es) adicionado(s)!`, 'success');
+          } else {
+            mostrarAlerta('✅ Livro editado!', 'success');
+          }
+        }
+      } else {
+        // NOVO
+        if (!id) {
+          mostrarAlerta('❌ Digite um ID!', 'danger');
+          return;
+        }
+        
+        if (livros.some(l => l.id === id)) {
+          mostrarAlerta('❌ ID já existe!', 'danger');
+          return;
+        }
+        
+        const novoLivro = new Book(id, dados.title, dados.author, dados.publisher, dados.year, dados.genre, dados.synopsis, dados.type, dados.coverUrl);
+        livros.push(novoLivro);
+        saveBooks(livros);
+        
+        // Criar cópias
+        const copias = getCopies();
+        const num = parseInt(document.getElementById('livroExemplares').value) || 2;
+        for (let i = 1; i <= num; i++) {
+          copias.push(new Copy('copy_' + id + '_' + i, id, i, 'available'));
+        }
+        saveCopies(copias);
+        
+        mostrarAlerta('✅ Livro adicionado!', 'success');
+        console.log('✅ Salvo:', novoLivro);
+      }
+
+      fecharModal();
+      mostrarLivros();
+      atualizarStats();
+    });
+
+    function deletarLivro(id) {
+      if (!confirm('Excluir?')) return;
+      
+      if (getLoans().some(e => e.bookId === id && e.status === 'active')) {
+        mostrarAlerta('❌ Tem empréstimos ativos!', 'danger');
+        return;
+      }
+
+      const livros = getBooks().filter(l => l.id !== id);
+      saveBooks(livros);
+      
+      const copias = getCopies().filter(c => c.bookId !== id);
+      saveCopies(copias);
+
+      mostrarAlerta('✅ Excluído!', 'success');
+      mostrarLivros();
+      atualizarStats();
+    }
+
+    function mostrarLivros() {
+      const livros = getBooks();
+      document.getElementById('booksContent').innerHTML = `
+        <button onclick="abrirModal()" class="btn btn-primary" style="margin-bottom: 1rem;">➕ Adicionar Livro</button>
+        <table class="table">
+          <thead><tr><th>ID</th><th>Título</th><th>Autor</th><th>Disponíveis</th><th>Ações</th></tr></thead>
+          <tbody>
+            ${livros.map(l => {
+              const av = getAvailableCopiesCount(l.id);
+              const tot = getTotalCopiesCount(l.id);
+              return `<tr><td><code>${l.id}</code></td><td><strong>${l.title}</strong></td><td>${l.author}</td><td>${av}/${tot}</td><td><button onclick="abrirModal('${l.id}')" class="btn btn-secondary btn-small">Editar</button> <button onclick="deletarLivro('${l.id}')" class="btn btn-danger btn-small">Excluir</button></td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function devolverLivro(id) {
+      if (!confirm('Confirmar?')) return;
+      const result = returnBook(id);
+      if (result.success) {
+        mostrarAlerta(result.message, result.daysLate > 0 ? 'warning' : 'success');
+        setTimeout(() => { atualizarStats(); mudarAba(abaAtual); }, 1000);
+      }
+    }
+
+    function mostrarAtivos() {
+      const emp = getLoans().filter(e => e.status === 'active');
+      if (emp.length === 0) {
+        document.getElementById('activeContent').innerHTML = '<p>Nenhum ativo</p>';
+        return;
+      }
+      document.getElementById('activeContent').innerHTML = emp.map(e => {
+        const u = getUserById(e.userId);
+        const l = getBookById(e.bookId);
+        const d = getDaysUntilDue(e.dueDate);
+        return `<div class="loan-card"><img src="${l.coverUrl}" class="loan-card-cover" onerror="this.src='public/capadelivro/placeholder.svg'"><div style="flex:1;"><h3>📚 ${l.title}</h3><p>👤 ${u.name}</p><p>Devolução: ${formatDate(e.dueDate)} (${d} dias)</p><button onclick="devolverLivro('${e.id}')" class="btn btn-success btn-small">Devolver</button></div></div>`;
+      }).join('');
+    }
+
+    function mostrarAtrasados() {
+      const emp = getOverdueLoans();
+      if (emp.length === 0) {
+        document.getElementById('overdueContent').innerHTML = '<p>🎉 Nenhum atraso!</p>';
+        return;
+      }
+      document.getElementById('overdueContent').innerHTML = emp.map(e => {
+        const u = getUserById(e.userId);
+        const l = getBookById(e.bookId);
+        const d = Math.abs(getDaysUntilDue(e.dueDate));
+        return `<div class="loan-card" style="border-left:4px solid red;"><img src="${l.coverUrl}" class="loan-card-cover" onerror="this.src='public/capadelivro/placeholder.svg'"><div style="flex:1;"><h3>📚 ${l.title}</h3><p>👤 ${u.name}</p><p style="color:red;">⚠️ Atrasado ${d} dias</p><button onclick="devolverLivro('${e.id}')" class="btn btn-success btn-small">Devolver</button></div></div>`;
+      }).join('');
+    }
+
+    function mostrarDevolucoes() {
+      const emp = getLoans().filter(e => e.status === 'returned').slice(0, 30);
+      if (emp.length === 0) {
+        document.getElementById('returnsContent').innerHTML = '<p>Nenhuma devolução</p>';
+        return;
+      }
+      document.getElementById('returnsContent').innerHTML = emp.map(e => {
+        const u = getUserById(e.userId);
+        const l = getBookById(e.bookId);
+        return `<div class="loan-card"><img src="${l.coverUrl}" class="loan-card-cover" onerror="this.src='public/capadelivro/placeholder.svg'"><div><h3>📚 ${l.title}</h3><p>👤 ${u.name}</p><p>Devolvido: ${formatDate(e.returnDate)}</p></div></div>`;
+      }).join('');
+    }
+
+    function mostrarRelatorios() {
+      const top = getTopBorrowedBooks(5);
+      document.getElementById('reportsContent').innerHTML = `
+        <div class="card" style="padding:1.5rem;">
+          <h3>📊 Exportar</h3>
+          <button onclick="exportTopBorrowedBooks()" class="btn btn-primary">Top Livros CSV</button>
+          <button onclick="exportOverdueLoans()" class="btn btn-warning">Atrasados CSV</button>
+          <button onclick="exportAllLoans()" class="btn btn-secondary">Todos CSV</button>
+        </div>
+        <div class="card" style="padding:1.5rem; margin-top:1rem;">
+          <h3>🏆 Top 5</h3>
+          ${top.length > 0 ? `<table class="table"><thead><tr><th>#</th><th>Livro</th><th>Empréstimos</th></tr></thead><tbody>${top.map((t,i) => `<tr><td>#${i+1}</td><td>${t.book.title}</td><td>${t.count}</td></tr>`).join('')}</tbody></table>` : '<p>Nenhum</p>'}
+        </div>
+      `;
+    }
+
+    function mostrarAlunos() {
+      const alunos = getUsers().filter(u => u.role === 'student').sort((a, b) => {
+        if (a.grade < b.grade) return -1;
+        if (a.grade > b.grade) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      const porTurma = {};
+      alunos.forEach(aluno => {
+        const turma = aluno.grade || 'Sem turma';
+        if (!porTurma[turma]) porTurma[turma] = [];
+        porTurma[turma].push(aluno);
+      });
+      
+      const turmas = Object.keys(porTurma).sort();
+      
+      document.getElementById('studentsContent').innerHTML = `
+        <div style="margin-bottom: 1.5rem;">
+          <h3>👥 Total de Alunos: ${alunos.length}</h3>
+          <p style="color: var(--text-gray);">Organizados por série/turma</p>
+        </div>
+        
+        ${turmas.map(turma => `
+          <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">🎓 ${turma} (${porTurma[turma].length} alunos)</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Empréstimos Ativos</th>
+                  <th>Total Emprestado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${porTurma[turma].map(aluno => {
+                  const emprestimosAtivos = getLoans().filter(e => e.userId === aluno.id && e.status === 'active').length;
+                  const totalEmprestimos = getLoans().filter(e => e.userId === aluno.id).length;
+                  return `
+                    <tr>
+                      <td><strong>${aluno.name}</strong></td>
+                      <td>${aluno.email}</td>
+                      <td>
+                        <span class="badge ${emprestimosAtivos > 0 ? 'badge-warning' : 'badge-success'}">
+                          ${emprestimosAtivos} ativo(s)
+                        </span>
+                      </td>
+                      <td>${totalEmprestimos} livro(s)</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    // INIT
+    atualizarStats();
+    mostrarAtivos();
+    initApp();
+  </script>
+</body>
+</html>

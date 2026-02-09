@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Painel - Bráulio Franco</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;">
+        <img src="public/images/logo-escola (1).jpg" alt="Logo Bráulio Franco" style="height: 40px; width: auto; object-fit: contain;">
+        <span>Bráulio Franco</span>
+      </a>
+      <div class="navbar-menu"></div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Welcome Header with Profile -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Olá, <span id="userName"></span>!</h1>
+        <p style="color: var(--text-gray);">Acompanhe sua jornada de leitura</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <a href="profile.html" style="text-decoration: none;">
+          <img id="userAvatar" src="" alt="Avatar" class="profile-avatar-small" style="cursor: pointer;" title="Ver perfil">
+        </a>
+        <div class="notification-badge" style="position: relative;">
+          <button onclick="toggleNotifications()" class="btn btn-secondary" style="position: relative;">
+            🔔 Notificações
+            <span id="notifBadge" style="display: none; position: absolute; top: -8px; right: -8px; background: #EF4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; font-weight: 600; min-width: 18px; text-align: center;"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Panel -->
+    <div id="notificationsPanel" class="card" style="display: none; margin-bottom: 2rem; max-height: 400px; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-gray);">
+        <h3 style="margin: 0;">📬 Suas Notificações</h3>
+        <button onclick="markAllAsRead()" class="btn btn-secondary btn-small">Marcar todas como lidas</button>
+      </div>
+      <div id="notificationsList"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">📚 Livros Lidos</p>
+        <p class="stat-value" id="booksReadCount">0</p>
+        <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 0.5rem;">Total devolvidos</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--primary-blue);">
+        <p class="stat-label">📖 Lendo Agora</p>
+        <p class="stat-value" id="currentlyReadingCount">0</p>
+        <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 0.5rem;">Empréstimos ativos</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--warning-yellow);">
+        <p class="stat-label">⏰ Reservas</p>
+        <p class="stat-value" id="pendingReservationsCount">0</p>
+        <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 0.5rem;">Aguardando</p>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--success-green);">
+        <p class="stat-label">🎯 No Prazo</p>
+        <p class="stat-value" id="onTimePercentage">100%</p>
+        <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 0.5rem;">Taxa de pontualidade</p>
+      </div>
+    </div>
+
+    <!-- Recommendations Section -->
+    <div class="recommendations-section">
+      <h3 class="recommendations-title">
+        🎯 Recomendações Para Você
+      </h3>
+      <p style="opacity: 0.9; margin-bottom: 1rem;">Baseado nos seus hábitos de leitura</p>
+      <div id="recommendationsGrid" class="recommendations-grid"></div>
+    </div>
+
+    <!-- Favorite Genres & Currently Reading -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+      <div class="card" style="padding: 1.5rem;">
+        <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.25rem;">🎭 Gêneros Favoritos</h3>
+        <div id="favoriteGenresContainer"></div>
+      </div>
+
+      <div class="card" style="padding: 1.5rem;">
+        <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.25rem;">📖 Lendo Agora</h3>
+        <div id="currentlyReadingContainer"></div>
+      </div>
+    </div>
+
+    <!-- Active Loans -->
+    <div class="section-header" style="margin-top: 2rem;">
+      <h2 class="section-title">Meus Empréstimos Ativos</h2>
+    </div>
+    <div id="activeLoansSection"></div>
+
+    <!-- Reservations -->
+    <div class="section-header mt-4">
+      <h2 class="section-title">Minhas Reservas</h2>
+    </div>
+    <div id="reservationsSection"></div>
+
+    <!-- Loan History -->
+    <div class="section-header mt-4">
+      <h2 class="section-title">Histórico de Leitura</h2>
+    </div>
+    <div id="historySection"></div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      window.location.href = 'login.html';
+    }
+
+    if (currentUser.role !== 'student') {
+      window.location.href = 'dashboard_bibliotecario.html';
+    }
+
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userAvatar').src = currentUser.avatar || DEFAULT_AVATAR + encodeURIComponent(currentUser.name);
+
+    function showAlert(message, type = 'info') {
+      const container = document.createElement('div');
+      container.className = `alert alert-${type}`;
+      container.textContent = message;
+      container.style.position = 'fixed';
+      container.style.top = '80px';
+      container.style.right = '20px';
+      container.style.zIndex = '9999';
+      document.body.appendChild(container);
+
+      setTimeout(() => {
+        container.remove();
+      }, 5000);
+    }
+
+    function toggleNotifications() {
+      const panel = document.getElementById('notificationsPanel');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        renderNotifications();
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    function renderNotifications() {
+      const notifications = getUserNotifications(currentUser.id);
+      const unreadCount = notifications.filter(n => !n.read).length;
+      const badge = document.getElementById('notifBadge');
+      const container = document.getElementById('notificationsList');
+      
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      if (notifications.length === 0) {
+        container.innerHTML = '<p style="padding: 2rem; text-align: center; color: var(--text-gray);">Nenhuma notificação</p>';
+        return;
+      }
+
+      container.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.read ? '' : 'unread'}" onclick="markAsRead('${notif.id}')">
+          <div style="display: flex; align-items: start; gap: 1rem;">
+            <span class="notification-icon">
+              ${notif.type === 'success' ? '✅' : 
+                notif.type === 'warning' ? '⚠️' : 
+                notif.type === 'danger' ? '🚨' : 'ℹ️'}
+            </span>
+            <div style="flex: 1;">
+              <p style="margin: 0; ${notif.read ? '' : 'font-weight: 600;'}">${notif.message}</p>
+              <small style="color: var(--text-gray); font-size: 0.75rem;">${formatDate(notif.createdAt)}</small>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function markAsRead(notificationId) {
+      markNotificationAsRead(notificationId);
+      renderNotifications();
+    }
+
+    function markAllAsRead() {
+      markAllNotificationsAsRead(currentUser.id);
+      renderNotifications();
+      showAlert('✅ Todas as notificações foram marcadas como lidas', 'success');
+    }
+
+    function renderStats() {
+      const loans = getLoans();
+      const reservations = getReservations();
+
+      const activeLoans = loans.filter(l => l.userId === currentUser.id && l.status === 'active');
+      const returnedLoans = loans.filter(l => l.userId === currentUser.id && l.status === 'returned');
+      const pendingReservations = reservations.filter(r => r.userId === currentUser.id && r.status === 'pending');
+
+      const onTimeReturns = returnedLoans.filter(l => {
+        const returnDate = new Date(l.returnDate);
+        const dueDate = new Date(l.dueDate);
+        return returnDate <= dueDate;
+      }).length;
+      
+      const onTimePercentage = returnedLoans.length > 0 
+        ? Math.round((onTimeReturns / returnedLoans.length) * 100) 
+        : 100;
+
+      document.getElementById('booksReadCount').textContent = returnedLoans.length;
+      document.getElementById('currentlyReadingCount').textContent = activeLoans.length;
+      document.getElementById('pendingReservationsCount').textContent = pendingReservations.length;
+      document.getElementById('onTimePercentage').textContent = onTimePercentage + '%';
+    }
+
+    function renderRecommendations() {
+      const recommendations = getRecommendations(currentUser.id, 6);
+      const container = document.getElementById('recommendationsGrid');
+      
+      if (recommendations.length === 0) {
+        container.innerHTML = '<p style="color: white; text-align: center; width: 100%;">Comece a ler para receber recomendações personalizadas!</p>';
+        return;
+      }
+
+      container.innerHTML = recommendations.map(book => `
+        <div class="recommendation-card" onclick="window.location.href='book.html?id=${book.id}'">
+          <img src="${book.coverUrl}" alt="${book.title}" onerror="this.src='public/capadelivro/placeholder.svg'">
+          <h4>${book.title}</h4>
+          <p>${book.author}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderFavoriteGenres() {
+      const loans = getLoans();
+      const userLoans = loans.filter(l => l.userId === currentUser.id);
+      
+      if (userLoans.length === 0) {
+        document.getElementById('favoriteGenresContainer').innerHTML = `
+          <p style="color: var(--text-gray); font-size: 0.875rem;">Comece a ler para descobrir seus gêneros favoritos!</p>
+        `;
+        return;
+      }
+
+      const genreCounts = {};
+      userLoans.forEach(loan => {
+        const book = getBookById(loan.bookId);
+        if (book) {
+          genreCounts[book.genre] = (genreCounts[book.genre] || 0) + 1;
+        }
+      });
+
+      const sortedGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      const maxCount = sortedGenres[0][1];
+
+      document.getElementById('favoriteGenresContainer').innerHTML = sortedGenres.map(([genre, count]) => {
+        const percentage = (count / maxCount) * 100;
+        return `
+          <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+              <span style="font-size: 0.875rem; font-weight: 500;">${genre}</span>
+              <span style="font-size: 0.875rem; color: var(--text-gray);">${count} ${count === 1 ? 'livro' : 'livros'}</span>
+            </div>
+            <div style="background: var(--bg-gray); height: 8px; border-radius: 4px; overflow: hidden;">
+              <div style="background: var(--primary-blue); height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCurrentlyReading() {
+      const loans = getLoans();
+      const activeLoans = loans.filter(l => l.userId === currentUser.id && l.status === 'active');
+      
+      if (activeLoans.length === 0) {
+        document.getElementById('currentlyReadingContainer').innerHTML = `
+          <p style="color: var(--text-gray); font-size: 0.875rem;">Você não está lendo nenhum livro no momento.</p>
+          <a href="books.html" class="btn btn-primary btn-small" style="margin-top: 1rem;">Buscar Livros</a>
+        `;
+        return;
+      }
+
+      document.getElementById('currentlyReadingContainer').innerHTML = activeLoans.map(loan => {
+        const book = getBookById(loan.bookId);
+        const daysUntil = getDaysUntilDue(loan.dueDate);
+        const isOverdue = daysUntil < 0;
+        const isNearDue = daysUntil <= 2 && daysUntil >= 0;
+
+        return `
+          <div style="display: flex; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-gray);">
+            <img src="${book.coverUrl}" alt="${book.title}" 
+                 style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                 onerror="this.src='public/capadelivro/placeholder.svg'">
+            <div style="flex: 1;">
+              <a href="book.html?id=${book.id}" style="color: var(--primary-blue); text-decoration: none; font-weight: 600; font-size: 0.875rem;">
+                ${book.title}
+              </a>
+              <p style="font-size: 0.75rem; color: var(--text-gray); margin: 0.25rem 0;">${book.author}</p>
+              <span class="badge ${isOverdue ? 'badge-danger' : isNearDue ? 'badge-warning' : 'badge-success'}" 
+                    style="font-size: 0.75rem;">
+                ${isOverdue ? `Atrasado ${Math.abs(daysUntil)} dia(s)` : 
+                  isNearDue ? `Vence em ${daysUntil} dia(s)` : 
+                  `${daysUntil} dia(s) restantes`}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const items = document.querySelectorAll('#currentlyReadingContainer > div');
+      if (items.length > 0) {
+        items[items.length - 1].style.borderBottom = 'none';
+        items[items.length - 1].style.paddingBottom = '0';
+      }
+    }
+
+    function handleRenewal(loanId) {
+      const result = renewLoan(loanId);
+      
+      if (result.success) {
+        showAlert('Empréstimo renovado com sucesso!', 'success');
+        setTimeout(() => {
+          renderActiveLoans();
+          renderStats();
+          renderNotifications();
+        }, 1000);
+      } else {
+        showAlert(result.message, 'danger');
+      }
+    }
+
+    function handleCancelReservation(reservationId) {
+      if (!confirm('Tem certeza que deseja cancelar esta reserva?')) {
+        return;
+      }
+
+      const result = cancelReservation(reservationId);
+      
+      if (result.success) {
+        showAlert('Reserva cancelada com sucesso.', 'success');
+        setTimeout(() => {
+          renderReservations();
+          renderStats();
+        }, 1000);
+      } else {
+        showAlert(result.message, 'danger');
+      }
+    }
+
+    function renderActiveLoans() {
+      const loans = getLoans();
+      const activeLoans = loans.filter(l => l.userId === currentUser.id && l.status === 'active');
+      const container = document.getElementById('activeLoansSection');
+
+      if (activeLoans.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="padding: 2rem; text-align: center;">
+            <p style="color: var(--text-gray);">Você não possui empréstimos ativos no momento.</p>
+            <a href="books.html" class="btn btn-primary" style="margin-top: 1rem;">Buscar Livros</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Livro</th>
+                <th>Data do Empréstimo</th>
+                <th>Data de Devolução</th>
+                <th>Status</th>
+                <th>Renovações</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activeLoans.map(loan => {
+                const book = getBookById(loan.bookId);
+                const daysUntil = getDaysUntilDue(loan.dueDate);
+                const isOverdue = daysUntil < 0;
+                const isNearDue = daysUntil <= 2 && daysUntil >= 0;
+
+                return `
+                  <tr>
+                    <td>
+                      <a href="book.html?id=${book.id}" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">
+                        ${book.title}
+                      </a>
+                      <br>
+                      <span style="font-size: 0.875rem; color: var(--text-gray);">${book.author}</span>
+                    </td>
+                    <td>${formatDate(loan.loanDate)}</td>
+                    <td>${formatDate(loan.dueDate)}</td>
+                    <td>
+                      <span class="badge ${isOverdue ? 'badge-danger' : isNearDue ? 'badge-warning' : 'badge-success'}">
+                        ${isOverdue ? `Atrasado ${Math.abs(daysUntil)} dia(s)` : 
+                          isNearDue ? `Vence em ${daysUntil} dia(s)` : 
+                          `${daysUntil} dia(s) restantes`}
+                      </span>
+                    </td>
+                    <td>${loan.renewalCount}/1</td>
+                    <td>
+                      ${loan.renewalCount < 1 ? `
+                        <button onclick="handleRenewal('${loan.id}')" class="btn btn-warning btn-small">
+                          Renovar
+                        </button>
+                      ` : `
+                        <span style="font-size: 0.875rem; color: var(--text-gray);">Já renovado</span>
+                      `}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderReservations() {
+      const reservations = getReservations();
+      const userReservations = reservations.filter(r => r.userId === currentUser.id && r.status !== 'cancelled');
+      const container = document.getElementById('reservationsSection');
+
+      if (userReservations.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="padding: 2rem; text-align: center;">
+            <p style="color: var(--text-gray);">Você não possui reservas no momento.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Livro</th>
+                <th>Data da Reserva</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${userReservations.map(reservation => {
+                const book = getBookById(reservation.bookId);
+                
+                return `
+                  <tr>
+                    <td>
+                      <a href="book.html?id=${book.id}" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">
+                        ${book.title}
+                      </a>
+                      <br>
+                      <span style="font-size: 0.875rem; color: var(--text-gray);">${book.author}</span>
+                    </td>
+                    <td>${formatDate(reservation.reservationDate)}</td>
+                    <td>
+                      <span class="badge ${reservation.status === 'fulfilled' ? 'badge-success' : 'badge-warning'}">
+                        ${reservation.status === 'fulfilled' ? 'Disponível!' : 'Aguardando'}
+                      </span>
+                    </td>
+                    <td>
+                      ${reservation.status === 'fulfilled' ? `
+                        <a href="book.html?id=${book.id}" class="btn btn-success btn-small">
+                          Emprestar Agora
+                        </a>
+                      ` : `
+                        <button onclick="handleCancelReservation('${reservation.id}')" class="btn btn-danger btn-small">
+                          Cancelar
+                        </button>
+                      `}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderHistory() {
+      const loans = getLoans();
+      const returnedLoans = loans.filter(l => l.userId === currentUser.id && l.status === 'returned')
+        .sort((a, b) => new Date(b.returnDate) - new Date(a.returnDate))
+        .slice(0, 20);
+      
+      const container = document.getElementById('historySection');
+
+      if (returnedLoans.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="padding: 2rem; text-align: center;">
+            <p style="color: var(--text-gray);">Você ainda não devolveu nenhum livro.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Livro</th>
+                <th>Empréstimo</th>
+                <th>Devolução</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${returnedLoans.map(loan => {
+                const book = getBookById(loan.bookId);
+                const returnDate = new Date(loan.returnDate);
+                const dueDate = new Date(loan.dueDate);
+                const wasLate = returnDate > dueDate;
+                const daysLate = wasLate ? Math.floor((returnDate - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+
+                return `
+                  <tr>
+                    <td>
+                      <a href="book.html?id=${book.id}" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">
+                        ${book.title}
+                      </a>
+                    </td>
+                    <td>${formatDate(loan.loanDate)}</td>
+                    <td>${formatDate(loan.returnDate)}</td>
+                    <td>
+                      <span class="badge ${wasLate ? 'badge-danger' : 'badge-success'}">
+                        ${wasLate ? `Atrasado ${daysLate} dia(s)` : 'No prazo'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // Initialize
+    renderNotifications();
+    renderStats();
+    renderRecommendations();
+    renderFavoriteGenres();
+    renderCurrentlyReading();
+    renderActiveLoans();
+    renderReservations();
+    renderHistory();
+
+    window.handleRenewal = handleRenewal;
+    window.handleCancelReservation = handleCancelReservation;
+
+    initApp();
+  </script>
+</body>
+</html>
